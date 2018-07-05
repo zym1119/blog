@@ -4,7 +4,7 @@
 
 对于CNN来说，由于池化层的存在，卷积核的感受野（Receptive Field）可以迅速地扩大，对于最顶层的神经元，其感受野通常能够覆盖整个图片。例如对于VGG的fc7层，其理论上的感受野有404\*404大小，而输入的图像也不过224\*224，似乎底层的神经元是完全有能力去感知到整个图像的全部信息。但事实却并不是这样的。文章通过实验证明了神经网络实际的感受野要远小于其理论上的感受野，并不足以捕捉到全局语义信息。
 
-![58177691.png](https://github.com/zym1119/blog/tree/master/ParseNet-%20Looking%20Wider%20to%20See%20Better_files/58177691.png)
+![58177691.png](https://github.com/zym1119/blog/blob/master/ParseNet-%20Looking%20Wider%20to%20See%20Better_files/58177691.png)
 
 如上图所示，（a）是原图，（b）是某个神经元输出的Activation map，文章对原图上滑动一个窗口，对这个窗口内部的图像加入随机噪声并观察加噪声后该神经元的输出是否有较大的变化，当产生较大变化时，代表这个神经元可以感受到这部分图像，并由此得到实际的感受野，如图（d）所示。经过实验发现，实际感受野只有原图的约1*/4大小。在另一篇名为
 >Object detectors emerge in deep scene cnns
@@ -13,13 +13,13 @@
 
 既然有了这样的现象，那很自然得就会想到加入全局信息去提升神经网络分割的能力。人们常说，窥一斑而知全豹，但这句话并不总是成立的，如果说你盯着一根杆子使劲看而不去关注它的环境位置顶部底座等信息，同样难以判断出来这根杆子是电线杆还是标志牌或者红绿灯。就如同以下FCN的输出一样，充满了错误的分类结果
 
-![59141282.png](https://github.com/zym1119/blog/tree/master/ParseNet-%20Looking%20Wider%20to%20See%20Better_files/59141282.png)
+![59141282.png](https://github.com/zym1119/blog/blob/master/ParseNet-%20Looking%20Wider%20to%20See%20Better_files/59141282.png)
 
 # Early Fusion and Late Fusion
 
 通过全局平均池化（Global Average Pooling）后，就要考虑如何将得到的全局信息加入CNN了。
 
-![59986321.png](https://github.com/zym1119/blog/tree/master/ParseNet-%20Looking%20Wider%20to%20See%20Better_files/59986321.png)
+![59986321.png](https://github.com/zym1119/blog/blob/master/ParseNet-%20Looking%20Wider%20to%20See%20Better_files/59986321.png)
 
 一种方式叫做early fusion，对得到的全局信息进行反池化（Unpool），得到和原特征图同样维度的全局特征，再把两者拼接起来，一起送入分类器中。由于文章使用的全局池化是平均池化，在反池化的时候，就是把得到的结果复制H\*W遍铺成矩形，得到一个H*W*C的特征图。
 
@@ -29,7 +29,7 @@
 
 但是在融合的时候一定要注意的一个问题就是不同层特征的尺度不同，这也就是为什么一定要进行归一化的原因。
 
-![60981195.png](https://github.com/zym1119/blog/tree/master/ParseNet-%20Looking%20Wider%20to%20See%20Better_files/60981195.png)
+![60981195.png](https://github.com/zym1119/blog/blob/master/ParseNet-%20Looking%20Wider%20to%20See%20Better_files/60981195.png)
 
 这张图的四种颜色代表了从四个不同深度的卷积层中提取出的特征向量，可以看到底层和顶层特征向量的尺度会有很大的差别，如果不进行归一化，高层的特征几乎都会被底层的大尺度特征向量所覆盖，无法对分类造成影响。
 
@@ -44,4 +44,4 @@
 
 最后文章自己炼丹炼了几组baseline，有DeepLab有FCN，都是超过了论文提到的mIoU，然后拿去和自己的模型比较，发现自己的网络性能都达到了SOTA的境界。
 效果对比图如下：
-![61739937.png](https://github.com/zym1119/blog/tree/master/ParseNet-%20Looking%20Wider%20to%20See%20Better_files/61739937.png)
+![61739937.png](https://github.com/zym1119/blog/blob/master/ParseNet-%20Looking%20Wider%20to%20See%20Better_files/61739937.png)
