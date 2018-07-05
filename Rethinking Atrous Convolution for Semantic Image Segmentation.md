@@ -66,7 +66,7 @@ $RF_i = RF_{i-1}+(Kernelsize-1)*Stride$
 
 这意味着想要获取全局信息，使用大的rate并不是一个合适的办法，因此，作者在ASPP层又加入了一个全局平均池化（Global Average Pooling），让空洞卷积只负责较大尺度的信息聚合，全局信息交给GAP来收集，GAP位于模型的最后一层，得到的全局特征还会再经过一个1\*1的卷积，输出256通道的特征图，最后经过双线性插值插值到原来的大小，与其他的特征图拼接（Concatenate）起来，如下所示：
 
-![41459168.png](https://github.com/zym1119/blog/blob/master/Rethinking%20Atrous%20Convolution%20for%20Semantic%20Image%20Segmentation_filess/41459168.png)
+![41459168.png](https://github.com/zym1119/blog/blob/master/Rethinking%20Atrous%20Convolution%20for%20Semantic%20Image%20Segmentation_files/41459168.png)
 
 在对比试验中，加入Image Pooling前后的mIoU分别为76.58与77.21，而在ASPP中把Image Pooling替换成rate=24的空洞卷积，性能反而下降了0.12，只有76.46
 正说明了GAP对全局信息的聚合能力与空洞卷积大rate下的退化现象。
