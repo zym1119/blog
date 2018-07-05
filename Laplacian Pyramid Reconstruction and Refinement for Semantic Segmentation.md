@@ -1,33 +1,51 @@
 #Introduction
+
 这篇文章介绍了空间信息与语义信息的原则并提出两种方法显著提高了分割的结果：
 首先，文章提出池化破坏了通道内部的空间信息，因为池化之前的卷积可以认为其融合了多个通道空间信息并编码得到高维向量。当然这个问题大家都知道。越低的层得到的分割边缘越清晰位置越明确分辨率也越高，但很多错误分类结果；而高层得到的分割则更正确但边缘也更模糊，不够锐利。于是文章使用了一种data-adapted的基础函数来做上采样，使性能得到了显著提高。
-![68083498.png](Laplacian Pyramid Reconstruction and Refinement for Semantic Segmentation_files/68083498.png)
+
+![68083498.png](https://github.com/zym1119/blog/blob/master/Laplacian%20Pyramid%20Reconstruction%20and%20Refinement%20for%20Semantic%20Segmentation_files/68083498.png)
+
 随后，文章认为相比于以前通过拼接或是相加对于空间信息的恢复与跨层的信息融合都不太好。拼接会来带特征向量的高纬度，也即会使通道的数量显著增加，而加法并不能很好地利用起空间与语义信息的相关性，并不是一个很好的trade-off，因为高分辨率的预测结果会因感受野过小而存在很多噪声预测或者说错误预测，文章发现相比于底层的语义信息，高分辨率的预测结果对最终的预测几乎没有什么影响，因为其大部分内容都被神经网络选择性忽略。
 于是文章受到ResNet思想的影响，使用网络去学习残差分割，即利用底层的高分辨率分割结果去学习如何锐化高层的低分辨率结果，使其边缘更加接近真实分割。
+
 #Reconstruction with learned basis function
+
 如果是简单得对得到的低分辨率的分割结果进行上采样得到，那么特征图的通道数也会很快地坍塌成类别的数目，比如说从4096变为21，这样会丢失掉很多已经被编码的信息，而这也是文章想要避免的，因此，文章使用了一种通过数据学到的basis function来扩展网络的空间信息的表达能力，这个方法被文章称为“Reconstruction”，重构。
+
 图像的重构是通过反卷积（Deconvolution）来完成的。要注意的是，文章使用的反卷积是和AlexNet中的pooling一样具有重叠，假设我们想要得到比原图大4x的重构特征图，那就使用一组卷积核对图像进行反卷积，卷积核大小为8\*8而不是7\*7，步进为4，如果有21种分类，那么卷积核的通道数为21\*10=210，其中的10就是一组basis function的数量。
+
 如果想要提高插值的性能，我们通常会把双线性插值替换为更厉害的样条插值。
+
 >样条方程是一类分段光滑、并且在各段交接处也有一定光滑性的函数。样条一词来源于工程绘图人员为了将一些指定点连接成一条光顺曲线所使用的工具，即富有弹性的细木条或薄钢条。由这样的样条形成的曲线在连接点处具有连续的坡度与曲率。分段低次多项式、在分段处具有一定光滑性的函数插值就是模拟以上原理发展起来的，它克服了高次多项式插值可能出现的振荡现象，具有较好的数值稳定性和收敛性，由这种插值过程产生的函数就是多项式样条函数。
 
-![70091506.png](Laplacian Pyramid Reconstruction and Refinement for Semantic Segmentation_files/70091506.png)
+![70091506.png](https://github.com/zym1119/blog/blob/master/Laplacian%20Pyramid%20Reconstruction%20and%20Refinement%20for%20Semantic%20Segmentation_files/70091506.png)
 文章认为在第一个卷积层使用更大的卷积核比如5\*5要比使用1\*1好，因为这也类似于样条插值需要考虑每个点和相邻点的关系。而得到的210通道的特征图被文章称为"coefficients"，这是网络学习到的与basis function进行反卷积的参数。
 >有的文章真的很喜欢乱起名，就叫feature map不好么？
 
 而basis function又是怎么来的呢？
+
 basis function是网络学习到的参数，但它的初始化不是和其他卷积层一样的。文章对要分的每一个类从训练数据中提取了10000块儿图像，每一块儿块儿都是32\*32大小而且至少2%的像素是属于这个类。通过对这10000块儿进行PCA，对每一类得到k个basis function。
-![70800131.png](Laplacian Pyramid Reconstruction and Refinement for Semantic Segmentation_files/70800131.png)
+
+![70800131.png](https://github.com/zym1119/blog/blob/master/Laplacian%20Pyramid%20Reconstruction%20and%20Refinement%20for%20Semantic%20Segmentation_files/70800131.png)
+
 有意思的是，文章发现端到端的训练对basis function几乎没有什么影响，训练中这些滤波器的改变量非常的小（10^-7）
+
 #Laplacian Pyramid Refinement
+
 这部分介绍网络的结构，以及网络是如何使用残差的
+
 >一般情况下有两种类型的图像金字塔常常出现在文献和以及实际运用中。他们分别是:
 * 高斯金字塔(Gaussianpyramid): 用来向下采样，主要的图像金字塔
 * 拉普拉斯金字塔(Laplacianpyramid): 用来从金字塔低层图像重建上层未采样图像，在数字图像处理中也即是预测残差，可以对图像进行最大程度的还原，配合高斯金字塔一起使用。
 
 两者的简要区别：高斯金字塔用来向下降采样图像，而拉普拉斯金字塔则用来从金字塔底层图像中向上采样重建一个图像。
 
-![71131748.png](Laplacian Pyramid Reconstruction and Refinement for Semantic Segmentation_files/71131748.png)
+![71131748.png](https://github.com/zym1119/blog/blob/master/Laplacian%20Pyramid%20Reconstruction%20and%20Refinement%20for%20Semantic%20Segmentation_files/71131748.png)
+
 文章使用了非常多的模块来完成分割，首先右上角的模块是用来生成边界的掩膜（Boundary mask）的。通过正反的最大值池化相加，如果不是边界的地方会相互抵消为0，而边界的池化结果总是一大一小，相加不为0，通过控制池化的大小，就可以控制mask的线条粗细。
+
 每一部分网络的输出，都会被送入重构模块生成该分辨率大小的分割图，而每一个分割图都会产生softmax loss并回传梯度，低分辨率的分割图经过上采样生成与上一个分辨率一样大小的分割图，再生成mask，与该层的分割图进行点乘，再于上一层的分割图相加，得到refine后的分割图，并把这个分割图作为本层最终的结果，送入再下一层并求softmax loss，以此类推。
+
 #Conclusion
+
 总体而言，这篇文章的思路非常有趣，使用池化而不是卷积来生成边界的mask，没有加入额外的参数量，使用mask也类似于加入了注意力机制，告诉网络每一层的预测结果哪些重要哪些不重要，再利用相加把这层的影响叠加到上一层的分割上，使深层的分割更多得决定分类，浅层的分割更多得决定边缘，得到更精确的分割结果。
